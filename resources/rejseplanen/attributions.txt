@@ -1,0 +1,2 @@
+attribution_id,is_producer,organization_name,attribution_url
+rp,1,Rejseplanen,https://www.rejseplanen.dk

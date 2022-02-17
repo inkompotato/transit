@@ -1,11 +1,13 @@
 [package]
-name = "skybrain"
+name = "rs_transit"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "skybrain"
+name = "rs_transit"
 crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = {version= "0.15.1", features=["extension-module"]}
+transitfeed = "0.3.0"
+petgraph = {version= "0.6.0", features=["serde-1"]}
