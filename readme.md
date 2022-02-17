@@ -1,7 +1,9 @@
-# Rust Notebook
-Use pyO3 to build python modules in rust.
+# Transit
+Analyzing Public transit in Denmark and elsewhere. Using GTFS data and the Rejseplanen API.
 
 ## Build instructions
+Uses pyO3 to build python modules in rust.
+
 To build the python module, run `maturin develop`. If `maturin` is not available, run `pip install maturin`. Use a python kernel for the notebook.
 
 ## Useful links
