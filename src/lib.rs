@@ -1,5 +1,5 @@
-use pyo3::{prelude::*, types::PyTuple};
-use transitfeed::{Agency, GTFSIterator, Route, Stop};
+use pyo3::prelude::*;
+use transitfeed::{Agency, GTFSIterator, Stop};
 
 /// A Python module implemented in Rust.
 #[pymodule]
