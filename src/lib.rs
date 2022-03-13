@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use geo_types::Point;
 use gtfs_structures::*;
 use h3ron::{H3Cell, Index};
+use itertools::Itertools;
 use pyo3::prelude::*;
 
 /// A Python module implemented in Rust.
@@ -59,9 +60,40 @@ impl RGtfs {
         Ok(res)
     }
 
+    /// Get a list of all routes
+    pub fn get_routes(&self) -> PyResult<Vec<(String, String)>> {
+        let res = self.gtfs.routes.iter().map(|(_, route)| {
+            (route.id.to_string(), route.short_name.to_string())
+        }).collect::<Vec<_>>();
+
+        Ok(res)
+    }
+
     /// Get a list of all lines
-    pub fn get_routes(&self) -> PyResult<HashMap<String, Vec<String>>> {
-        Ok(HashMap::new())
+    /// route_ID -> Vec<(stop_id, departure_time)>
+    pub fn get_route_departures(&self) -> PyResult<HashMap<String, Vec<(String, u32)>>> {
+        let res: HashMap<String, Vec<(String, u32)>> = self
+            .gtfs
+            .trips
+            .iter()
+            .map(|(_, trip)| {
+                let route = &trip.route_id;
+                let stop_sequence = trip.stop_times.iter().map(|stop_time| {
+                    let departure = stop_time.departure_time.unwrap_or_default();
+                    let stop_id = stop_time.stop.id.to_string();
+                    (stop_id, departure)
+                }).collect::<Vec<_>>();
+                (route, stop_sequence)
+            }).into_group_map_by(|tuple| tuple.0 ).into_iter().map(|(key, value)| {
+                //key: route ID
+                //value: all trips on that route as Vec<StopID, departure time>
+                //unify into routeID -> Vec<stop_id<Vec<departure times>>
+                let stop_departure_times = value.into_iter().map(|(_, stop_sequence)| stop_sequence ).flatten().collect::<Vec<_>>();
+
+                (key.to_string(), stop_departure_times)
+            }).collect();
+        
+        Ok(res)
     }
 
     pub fn __repr__(&self) -> String {

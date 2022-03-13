@@ -1329,6 +1329,7 @@ dependencies = [
  "geo-types",
  "gtfs-structures",
  "h3ron",
+ "itertools",
  "pyo3",
  "zip",
 ]
