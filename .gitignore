@@ -2,3 +2,7 @@
 __pycache__
 stop_times.txt
 shapes.txt
+out.csv
+out.json
+keplergl_map.html
+*.zip
