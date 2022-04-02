@@ -1,31 +1,40 @@
-const {DeckGL, H3HexagonLayer} = deck;
+const {DeckGL, H3HexagonLayer, MapController} = deck;
+
+class MyMapController extends MapController {
+  handleEvent(event) {
+    if (event.type === "panmove") {
+      let v = deckgl.viewManager._viewports[0]
+      document.getElementById('debug-info').innerHTML = `${v.latitude.toFixed(2)}, ${v.longitude.toFixed(2)}`
+    }
+    super.handleEvent(event)
+  }
+}
 
 const deckgl = new DeckGL({
   mapStyle: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+  controller: {type: MyMapController},
   initialViewState: {
     longitude: 12.6,
     latitude: 55.6,
     zoom: 10,
     minZoom: 5,
     maxZoom: 15,
-    pitch: 40.5
+    pitch: 40.5,
   },
-  controller: true
 });
 
-const data = d3.csv("data.csv")
+const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
+const data = d3.csv("../notebooks/data.csv").then(data => {
+  return data.map(d => {
+    return {
+      h3: d.h3,
+      freq: new Float32Array(JSON.parse(d.freq))
+    }
+  })
+})
 
 const OPTIONS = ['time'];
-
-const COLOR_RANGE = [
-  [1, 152, 189],
-  [73, 227, 206],
-  [216, 254, 181],
-  [254, 237, 177],
-  [254, 173, 84],
-  [209, 55, 78]
-];
 
 OPTIONS.forEach(key => {
   document.getElementById(key).oninput = renderLayer;
@@ -39,8 +48,8 @@ function renderLayer () {
     const value = +document.getElementById(key).value;
     document.getElementById(key + '-value').innerHTML = value;
     options[key] = parseInt(value);
-    if(key="time") {
-      document.getElementById('time-label').innerHTML = `Day ${Math.floor(value/24) + 1}, ${(value%24) + 1}:00h`;
+    if(key === "time") {
+      document.getElementById('time-label').innerHTML = `${days[Math.floor(value/24)]}, ${(value%24)}:00 - ${(value%24) + 1}:00`;
     }
   });
 
@@ -54,11 +63,23 @@ function renderLayer () {
     elevationScale: 20,
     getHexagon: d => d.h3,
     getFillColor: d => [255, 128, 0],
-    getElevation: d => JSON.parse(d.freq)[options['time']],
+    getElevation: d => d.freq[options['time']],
     updateTriggers: {
-      getElevation: d => JSON.parse(d.freq)[options['time']]
+      getElevation: [options['time']]
     }
   });
+
+  const testLayer = new H3HexagonLayer({
+    id: 'h3-test-layer',
+    data: [{h3: "831f05fffffffff"}],
+    wireframe: false,
+    filled: true,
+    extruded: false,
+    elevationScale: 0,
+    getFillColor: d => [255, 255, 255],
+    getHexagon: d => d.h3,
+    getElevation: d => 12
+  })
 
   deckgl.setProps({
     layers: [h3layer]

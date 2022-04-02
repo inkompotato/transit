@@ -15,11 +15,33 @@
 </head>
 
 <body style="height: 100vh; margin: 0">
-    <div class="uk-position-z-index uk-position-bottom-left uk-overlay uk-width-3-4 uk-width-1-2@m">
-        <label>Time</label>
-        <input id="time" class="uk-range" type="range" min="0" max="167" step="1" value="0"></input>
-        <span>(<span id="time-value"></span>)</span>
-        <span id="time-label"></span>
+    <div class="uk-position-z-index uk-position-small uk-position-bottom-left uk-overlay uk-overlay-primary uk-padding-small uk-width-3-4 uk-width-1-2@m" uk-grid>
+        <div uk-grid>
+            <ul class="uk-tab-left uk-width-auto" uk-tab>
+                <li class="uk-active"><a href="#"><span uk-icon="settings"></span></a></li>
+                <li><a href="#"><span uk-icon="location"></span></a></li>
+                <li><a href="#"><span uk-icon="info"></span></a></li>
+            </ul>
+            <ul class="uk-switcher uk-width-expand">
+                <li>
+                    <label>Public Transit Accessibility Score</label>
+                    <input id="time" class="uk-range" type="range" min="0" max="167" step="1" value="0"/>
+                    <span>(<span id="time-value"></span>)</span>
+                    <span id="time-label"></span>
+
+                </li>
+                <li>
+                    <p><span id="debug-info">12.6, 55.6</span></p>
+                </li>
+                <li>
+                    <p>© Jacob Aarup Dalsgaard & Jan Leonard Schelhaas, 2022</p>
+                    <p><a class="uk-link-muted" href="https://itu.dk/" target="_blank">IT Universitetet i København</a></p>
+                </li>
+            </ul>
+        </div>
+
+
+
     </div>
 
     <script src="https://d3js.org/d3.v7.min.js"></script>
