@@ -15,9 +15,9 @@
 </head>
 
 <body style="height: 100vh; margin: 0">
-    <div class="uk-position-z-index uk-position-small uk-position-bottom-left uk-overlay uk-overlay-primary uk-padding-small uk-width-3-4 uk-width-1-2@m" uk-grid>
-        <div uk-grid>
-            <ul class="uk-tab-left uk-width-auto" uk-tab>
+    <div class="uk-position-z-index uk-position-small uk-position-bottom-left uk-overlay uk-overlay-primary uk-padding-small uk-width-1-1 uk-width-3-4@s uk-width-1-2@m">
+        <div class="uk-grid-small" uk-grid>
+            <ul class="uk-tab-left uk-width-auto" uk-tab="media: 0">
                 <li class="uk-active"><a href="#"><span uk-icon="settings"></span></a></li>
                 <li><a href="#"><span uk-icon="location"></span></a></li>
                 <li><a href="#"><span uk-icon="info"></span></a></li>
@@ -25,10 +25,9 @@
             <ul class="uk-switcher uk-width-expand">
                 <li>
                     <label>Public Transit Accessibility Score</label>
-                    <input id="time" class="uk-range" type="range" min="0" max="167" step="1" value="0"/>
+                    <input id="time" class="uk-range uk-width-expand" type="range" min="0" max="167" step="1" value="0"/>
                     <span>(<span id="time-value"></span>)</span>
                     <span id="time-label"></span>
-
                 </li>
                 <li>
                     <p><span id="debug-info">12.6, 55.6</span></p>
@@ -39,9 +38,6 @@
                 </li>
             </ul>
         </div>
-
-
-
     </div>
 
     <script src="https://d3js.org/d3.v7.min.js"></script>
