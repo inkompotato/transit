@@ -1,10 +1,10 @@
-const {DeckGL, H3HexagonLayer, MapController} = deck;
+const {DeckGL, H3HexagonLayer, MapController, PathLayer} = deck;
 
 class MyMapController extends MapController {
   handleEvent(event) {
     if (event.type === "panmove") {
       let v = deckgl.viewManager._viewports[0]
-      document.getElementById('debug-info').innerHTML = `${v.latitude.toFixed(2)}, ${v.longitude.toFixed(2)}`
+      document.getElementById('coordinate-info').innerHTML = `${v.latitude.toFixed(2)}, ${v.longitude.toFixed(2)}`
     }
     super.handleEvent(event)
   }
@@ -25,11 +25,20 @@ const deckgl = new DeckGL({
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
-const data = d3.csv("../notebooks/data.csv").then(data => {
+const h3_data = d3.csv("../notebooks/data.csv").then(data => {
   return data.map(d => {
     return {
       h3: d.h3,
       freq: new Float32Array(JSON.parse(d.freq))
+    }
+  })
+})
+
+const route_data = d3.csv("../notebooks/routes.csv").then(data => {
+  return data.map(d => {
+    return {
+      path: JSON.parse(d.geo),
+      category: d['type']
     }
   })
 })
@@ -55,19 +64,39 @@ function renderLayer () {
 
   const h3layer = new H3HexagonLayer({
     id: 'h3-hexagon-layer',
-    data,
+    data: h3_data,
     pickable: false,
     wireframe: false,
     filled: true,
     extruded: true,
     elevationScale: 20,
     getHexagon: d => d.h3,
-    getFillColor: d => [255, 128, 0],
+    getFillColor: d => [255, 128, 0, 180],
     getElevation: d => d.freq[options['time']],
     updateTriggers: {
       getElevation: [options['time']]
     }
   });
+
+  const route_layer = new PathLayer({
+    id: 'route_layer',
+    data: route_data,
+    pickable: true,
+    wireframe: false,
+    widthMinPixels: 2,
+    getPath: d => d.path,
+    getColor: d => {
+      switch (d.category) {
+        case "0": return [17, 173, 125, 0]
+        case "1": return [17, 54, 173, 0]
+        case "2": return [250, 125, 0, 80]
+        case "3": return [12, 250, 125, 0]
+        default: return [12, 69, 250, 0]
+      }
+
+    },
+    getWidth: d => 5
+  })
 
   const testLayer = new H3HexagonLayer({
     id: 'h3-test-layer',
@@ -82,6 +111,6 @@ function renderLayer () {
   })
 
   deckgl.setProps({
-    layers: [h3layer]
+    layers: [h3layer, route_layer]
   });
 }
