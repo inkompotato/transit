@@ -38,10 +38,25 @@ const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", 
 })*/
 
 const OPTIONS = ['time'];
+const options = {};
 
 OPTIONS.forEach(key => {
     document.getElementById(key).oninput = renderLayer;
 });
+
+document.getElementById("now-button").onclick = setToCurrentTime;
+function setToCurrentTime() {
+    let now = new Date();
+    let day = now.getDay()
+    let hour = now.getHours()
+    let value = (day*24) + hour
+
+    options["time"] = value;
+    document.getElementById( 'time-value').innerHTML = value;
+    document.getElementById('time').value = value
+    document.getElementById('time-label').innerHTML = `${days[day]}, ${hour}:00 - ${hour + 1}:00`;
+    renderLayer()
+}
 
 const dataChunks = []
 
@@ -51,7 +66,6 @@ function onNewDataArrive(chunk) {
 }
 
 function renderLayer() {
-    const options = {};
     OPTIONS.forEach(key => {
         const value = +document.getElementById(key).value;
         document.getElementById(key + '-value').innerHTML = value;

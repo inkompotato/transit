@@ -25,9 +25,18 @@
             <ul class="uk-switcher uk-width-expand">
                 <li>
                     <label>Public Transit Accessibility Score</label>
-                    <input id="time" class="uk-range uk-width-expand" type="range" min="0" max="167" step="1" value="0"/>
-                    <span>(<span id="time-value"></span>)</span>
-                    <span id="time-label"></span>
+                    <div class="uk-grid-small" uk-grid>
+                        <div class="uk-width-auto">
+                            <a href="#" class="uk-icon-link" id="now-button" uk-icon="clock" uk-tooltip="set to current time"></a>
+                        </div>
+                        <div class="uk-width-expand">
+                            <input id="time" class="uk-range" type="range" min="0" max="167" step="1" value="0"/>
+                            <span class="uk-hidden">(<span id="time-value"></span>)</span>
+                            <span id="time-label"></span>
+                        </div>
+                    </div>
+
+
                 </li>
                 <li>
                     <p><span id="coordinate-info">12.6, 55.6</span></p>
