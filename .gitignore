@@ -6,3 +6,5 @@ out.csv
 out.json
 keplergl_map.html
 *.zip
+.idea
+.vscode
