@@ -21,7 +21,7 @@ const deckgl = new DeckGL({
     longitude: 12.6,
     latitude: 55.6,
     zoom: 10,
-    minZoom: 5,
+    minZoom: 7,
     maxZoom: 15,
     pitch: 40.5,
   },
