@@ -4,7 +4,11 @@ class MyMapController extends MapController {
   handleEvent(event) {
     if (event.type === "panmove") {
       let v = deckgl.viewManager._viewports[0]
-      document.getElementById('coordinate-info').innerHTML = `${v.latitude.toFixed(2)}, ${v.longitude.toFixed(2)}`
+      let lat = v.latitude
+      let lon = v.longitude
+      let zoom = v.zoom
+
+      document.getElementById('coordinate-info').innerHTML = `${lat.toFixed(2)}, ${lon.toFixed(2)} (${zoom})`
     }
     super.handleEvent(event)
   }
