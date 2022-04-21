@@ -58,6 +58,15 @@ function setToCurrentTime() {
     renderLayer()
 }
 
+function getColor(value) {
+    switch (value) {
+        case 0:
+            return [83, 122, 230, 180]
+        default:
+            return [89, 191, 217, 128]
+    }
+}
+
 const dataChunks = []
 
 function onNewDataArrive(chunk) {
@@ -84,7 +93,7 @@ function renderLayer() {
         extruded: true,
         elevationScale: 20,
         getHexagon: d => d.h3,
-        getFillColor: d => [255, 128, 0, 180],
+        getFillColor: d => getColor(d.type),
         getElevation: d => d.freq[options['time']],
         updateTriggers: {
             getElevation: [options['time']]
@@ -159,7 +168,8 @@ d3.json("h3.json").then(data => {
             return data.map(d => {
                 return {
                     h3: d.h3,
-                    freq: new Float32Array(d.freq)
+                    freq: new Float32Array(d.freq),
+                    type: d.type
                 }
             })
         }).then(data => {
