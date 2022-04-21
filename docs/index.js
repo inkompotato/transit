@@ -61,9 +61,15 @@ function setToCurrentTime() {
 function getColor(value) {
     switch (value) {
         case 0:
-            return [83, 122, 230, 180]
+            return [89, 191, 217, 120]
+        case 1:
+            return [217, 131, 111, 140]
+        case 2: 
+            return [89, 191, 217, 160]
+        case 3:
+            return [217, 174, 67, 180]
         default:
-            return [89, 191, 217, 128]
+            return [100, 132, 217, 100]
     }
 }
 
