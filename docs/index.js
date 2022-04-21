@@ -2,7 +2,7 @@ const {DeckGL, H3HexagonLayer, MapController, PathLayer} = deck;
 
 class MyMapController extends MapController {
     handleEvent(event) {
-        if (event.type === "panmove") {
+        if (event.type === "pan" || event.type === "pinch") {
             let v = deckgl.viewManager._viewports[0]
             let lat = v.latitude
             let lon = v.longitude
