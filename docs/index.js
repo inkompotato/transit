@@ -65,7 +65,7 @@ function getColor(value) {
         case 1:
             return [217, 131, 111, 140]
         case 2: 
-            return [89, 191, 217, 160]
+            return [78, 217, 168, 160]
         case 3:
             return [217, 174, 67, 180]
         default:
