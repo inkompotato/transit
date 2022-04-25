@@ -12,7 +12,7 @@ fn rs_transit(_py: Python, m: &PyModule) -> PyResult<()> {
     Ok(())
 }
 
-#[pyfunction]
-pub fn gtfs_reader(file: String) -> PyResult<HashMap<String, H3Stop>> {
-    parse_gtfs(file)
-}
+// #[pyfunction]
+// pub fn gtfs_reader(file: String) -> PyResult<HashMap<String, H3Stop>> {
+//     parse_gtfs(file)
+// }
