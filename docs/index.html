@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>H3 Vis</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- CSS -->
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.53.0/mapbox-gl.css' rel='stylesheet' />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uikit@3.13.5/dist/css/uikit.min.css" />
+
+    <!-- JS -->
+    <script src="https://cdn.jsdelivr.net/npm/uikit@3.13.5/dist/js/uikit.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/uikit@3.13.5/dist/js/uikit-icons.min.js"></script>
+</head>
+
+<body style="height: 100vh; margin: 0">
+    <div class="uk-position-z-index uk-position-small uk-position-bottom-left uk-overlay uk-overlay-primary uk-padding-small uk-width-1-1 uk-width-3-4@s uk-width-1-2@m">
+        <div class="uk-grid-small" uk-grid>
+            <ul class="uk-tab-left uk-width-auto" uk-tab="media: 0; swiping: false">
+                <li class="uk-active"><a href="#"><span uk-icon="settings"></span></a></li>
+                <li><a href="#"><span uk-icon="location"></span></a></li>
+                <li><a href="#"><span uk-icon="info"></span></a></li>
+            </ul>
+            <ul class="uk-switcher uk-width-expand">
+                <li>
+                    <label>Public Transit Accessibility Score</label>
+                    <div class="uk-grid-small" uk-grid>
+                        <div class="uk-width-auto">
+                            <a href="#" class="uk-icon-link" id="now-button" uk-icon="clock" uk-tooltip="set to current time"></a>
+                        </div>
+                        <div class="uk-width-expand">
+                            <input id="time" class="uk-range" type="range" min="0" max="167" step="1" value="0"/>
+                            <span class="uk-hidden">(<span id="time-value"></span>)</span>
+                            <span id="time-label"></span>
+                        </div>
+                    </div>
+
+
+                </li>
+                <li>
+                    <p><span id="coordinate-info">12.6, 55.6</span></p>
+                </li>
+                <li>
+                    <p>© Jacob Aarup Dalsgaard & Jan Leonard Schelhaas, 2022</p>
+                    <p><a class="uk-link-muted" href="https://itu.dk/" target="_blank">IT Universitetet i København</a></p>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/h3-js@3.7.2/dist/h3-js.umd.js"></script>
+    <script src="https://unpkg.com/deck.gl@latest/dist.min.js"></script>
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.53.0/mapbox-gl.js'></script>
+    <script src="index.js"></script>
+</body>
+
+</html>
