@@ -9,3 +9,4 @@ keplergl_map.html
 .idea
 .vscode
 *.pbf
+/notebooks/data
