@@ -7,12 +7,12 @@ edition = "2021"
 name = "rs_transit"
 crate-type = ["cdylib"]
 
+[[bin]]
+name = "rs_transit"
+
 [dependencies]
 pyo3 = {version= "0.15.1", features=["extension-module"]}
-gtfs-structures = "0.31.0"
 h3ron = "0.14.0"
-geo-types = "0.7.3"
-geojson = "0.22.2"
 
 zip = "0.6.0"
 itertools = "0.10.2"
@@ -20,5 +20,6 @@ csv = "1.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
-
 chrono = "0.4"
+tokio = { version = "1.18", features = ["full"] }
+tokio-postgres = {version = "0.7.6", features = ["with-serde_json-1", "runtime"] }
