@@ -1,11 +1,12 @@
 use h3ron::{FromH3Index, H3Cell, Index};
 use itertools::Itertools;
 use serde::Serialize;
-use tokio::{time::Instant};
 use std::{
     collections::{HashMap, VecDeque},
-    num::ParseIntError, fs::File,
+    fs::File,
+    num::ParseIntError,
 };
+use tokio::time::Instant;
 use tokio_postgres::{Error, NoTls, Row};
 
 const DB_CONN: &str = "postgresql://postgres:byS*<7AxwYC#U24s@srv-captain--postgres-db-db/postgres";
@@ -44,7 +45,7 @@ struct VisCell {
     h3: String,
     #[serde(rename(serialize = "type"))]
     transit_type: i32,
-    freq: Vec<f32>
+    freq: Vec<f32>,
 }
 
 #[derive(Debug)]
@@ -77,19 +78,19 @@ impl Cell {
     }
 
     pub fn aggregate_scores(&mut self) {
-        self.scores = self.scores
+        self.scores = self
+            .scores
             // create chunks the size of a week
-            .chunks(24*7 as usize)
-            .map(|x| { x.to_vec() })
+            .chunks(24 * 7 as usize)
+            .map(|x| x.to_vec())
             // sort by highest value (in this case, just by the score for monday morning to speed things up)
-            .sorted_by_key(|list| {
-                *list.get(31).unwrap_or(&0.0) as i32
-            })
+            .sorted_by_key(|list| *list.get(31).unwrap_or(&0.0) as i32)
             .reduce(|a, b| {
                 // reduce function, initial score + half of the next score, repeat for all
-                a.iter().zip(b.iter()).map(|(xa, xb)| {
-                    xa + (0.5 * xb)
-                }).collect()
+                a.iter()
+                    .zip(b.iter())
+                    .map(|(xa, xb)| xa + (0.2 * xb))
+                    .collect()
             })
             .unwrap_or_default();
     }
@@ -128,7 +129,11 @@ async fn main() -> Result<(), AppError> {
         .map(|(i, c)| (c.h3, i))
         .collect::<HashMap<u64, usize>>();
 
-    println!("[INFO DB] got {} cells from DB in {:?}", data.len(), start_time.elapsed());
+    println!(
+        "[INFO DB] got {} cells from DB in {:?}",
+        data.len(),
+        start_time.elapsed()
+    );
     println!("[INFO MEM] size: {} bytes", std::mem::size_of_val(&*data));
 
     // current h3, origin (station) h3, distance
@@ -177,8 +182,13 @@ async fn main() -> Result<(), AppError> {
                             .iter()
                             .map(|value| {
                                 // calculate score
-                                let new_value = value / (1.0 + 5.0 * f32::exp(0.5 * (f32::from(distance) - 1.5 * value)));
-                                if new_value > max_value { max_value = new_value }
+                                let new_value = value
+                                    / (1.0
+                                        + 5.0
+                                            * f32::exp(0.5 * (f32::from(distance) - 1.5 * value)));
+                                if new_value > max_value {
+                                    max_value = new_value
+                                }
                                 new_value
                             })
                             .collect::<Vec<f32>>();
@@ -194,7 +204,11 @@ async fn main() -> Result<(), AppError> {
             });
     }
     println!();
-    println!("[INFO MAIN] processed {} cells in {:?}", counter, start_time.elapsed());
+    println!(
+        "[INFO MAIN] processed {} cells in {:?}",
+        counter,
+        start_time.elapsed()
+    );
 
     // aggregate scores
     let start_time = Instant::now();
@@ -202,43 +216,64 @@ async fn main() -> Result<(), AppError> {
     for cell in &mut data {
         cell.aggregate_scores()
     }
-    println!("[INFO AGG-1] visitor score aggregation finished in {:?}", start_time.elapsed());
+    println!(
+        "[INFO AGG-1] visitor score aggregation finished in {:?}",
+        start_time.elapsed()
+    );
 
     // get all h3-4 groups
     data.iter()
-        .filter(|cell| {cell.transit_type != -1 || cell.scores.len() > 0})
-        .into_group_map_by(|cell| {
-            cell.h3_4
-        })
+        .filter(|cell| cell.transit_type != -1 || cell.scores.len() > 0)
+        .into_group_map_by(|cell| cell.h3_4)
         .into_iter()
         .for_each(|(h3_4group, cells)| {
             // aggregate to h3-10
             let vis_cells = cells
-            .into_iter()
-            .into_group_map_by(|cell| {cell.h3_10})
-            .iter()
-            .map(|(h3_10_group, h3_10_cells)| {
-                // aggregate the scores from each cell
-                let transit_type = h3_10_cells.iter().map(|cell| cell.transit_type).max().unwrap_or(-1);
-                let score = h3_10_cells.iter()
-                    .map(|cell| {vec![cell.scores.clone(), cell.freq.clone()]})
-                    .flatten()
-                    .reduce(|a, b| {
-                        a.iter().zip(b.iter()).map(|(xa, xb)| {
-                            xa + xb
-                        }).collect::<Vec<f32>>()
-                    }).unwrap_or(vec![0.0;24*7]).iter().map(|value| {
-                        value / h3_10_cells.len() as f32
-                    }).collect::<Vec<f32>>();
-                VisCell {
-                    h3: u64_to_hex(*h3_10_group),
-                    transit_type,
-                    freq: score,
-                }
-            }).collect::<Vec<VisCell>>();
+                .into_iter()
+                .into_group_map_by(|cell| cell.h3_10)
+                .iter()
+                .map(|(h3_10_group, h3_10_cells)| {
+                    // aggregate the scores from each cell
+                    let transit_type = h3_10_cells
+                        .iter()
+                        .map(|cell| cell.transit_type)
+                        .max()
+                        .unwrap_or(-1);
+                    let score = h3_10_cells
+                        .iter()
+                        .map(|cell| vec![cell.scores.clone(), cell.freq.clone()])
+                        .flatten()
+                        .reduce(|a, b| {
+                            a.iter()
+                                .zip(b.iter())
+                                .map(|(xa, xb)| xa + xb)
+                                .collect::<Vec<f32>>()
+                        })
+                        .unwrap_or(vec![0.0; 24 * 7])
+                        .iter()
+                        .map(|value| {
+                            let divisor: usize = h3_10_cells
+                                .iter()
+                                .map(|cell| if cell.transit_type >= 0 { 2 } else { 1 })
+                                .sum();
+                            let new_value = f32::powf(2.0, f32::exp(value / divisor as f32));
+                            if new_value < 0.01 {
+                                -1.0
+                            } else {
+                                new_value
+                            }
+                        })
+                        .collect::<Vec<f32>>();
+                    VisCell {
+                        h3: u64_to_hex(*h3_10_group),
+                        transit_type,
+                        freq: score,
+                    }
+                })
+                .collect::<Vec<VisCell>>();
 
             // write result for h3-4 group to json
-            let path = format!("docs/h3/{}.json",u64_to_hex(h3_4group));
+            let path = format!("docs/h3/{}.json", u64_to_hex(h3_4group));
             let file = File::create(path).expect("could not create file :(");
             serde_json::to_writer(file, &vis_cells).expect("could not export json :(");
         });
