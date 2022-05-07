@@ -1,8 +1,10 @@
 use h3ron::{FromH3Index, H3Cell, Index};
-use tokio::time::Instant;
+use itertools::Itertools;
+use serde::Serialize;
+use tokio::{time::Instant};
 use std::{
     collections::{HashMap, VecDeque},
-    num::ParseIntError
+    num::ParseIntError, fs::File,
 };
 use tokio_postgres::{Error, NoTls, Row};
 
@@ -37,6 +39,14 @@ impl From<h3ron::Error> for AppError {
     }
 }
 
+#[derive(Debug, Serialize)]
+struct VisCell {
+    h3: String,
+    #[serde(rename(serialize = "type"))]
+    transit_type: i32,
+    freq: Vec<f32>
+}
+
 #[derive(Debug)]
 struct Cell {
     h3: u64,
@@ -65,11 +75,30 @@ impl Cell {
         (&mut self.scores).append(&mut scores);
         (&mut self.visitors).push(origin);
     }
+
+    pub fn aggregate_scores(&mut self) {
+        self.scores = self.scores
+            // create chunks the size of a week
+            .chunks(24*7 as usize)
+            .map(|x| { x.to_vec() })
+            // sort by highest value (in this case, just by the score for monday morning to speed things up)
+            .sorted_by_key(|list| {
+                *list.get(31).unwrap_or(&0.0) as i32
+            })
+            .reduce(|a, b| {
+                // reduce function, initial score + half of the next score, repeat for all
+                a.iter().zip(b.iter()).map(|(xa, xb)| {
+                    xa + (0.5 * xb)
+                }).collect()
+            })
+            .unwrap_or_default();
+    }
 }
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
     let (client, connection) = tokio_postgres::connect(DB_CONN, NoTls).await?;
+    let start_time = Instant::now();
 
     tokio::spawn(async move {
         if let Err(e) = connection.await {
@@ -77,9 +106,9 @@ async fn main() -> Result<(), AppError> {
         }
     });
 
-    println!("connected to DB at {}", DB_CONN);
+    println!("[INFO DB] connected to DB at {}", DB_CONN);
 
-    // load all data into memory
+    // load all data from the DB into memory
     let mut data: Vec<Cell> = client
         .query(
             "
@@ -93,19 +122,21 @@ async fn main() -> Result<(), AppError> {
         .filter_map(|row| Cell::from_row(row))
         .collect();
 
+    // this is created to enable (near) constant time lookups in the data array
     let index: HashMap<u64, usize> = data
         .iter()
         .enumerate()
         .map(|(i, c)| (c.h3, i))
         .collect::<HashMap<u64, usize>>();
 
-    println!("got {} cells from DB", data.len());
-    println!("size: {} bytes", std::mem::size_of_val(&*data));
+    println!("[INFO DB] got {} cells from DB in {:?}", data.len(), start_time.elapsed());
+    println!("[INFO MEM] size: {} bytes", std::mem::size_of_val(&*data));
 
     // current h3, origin (station) h3, distance
     let mut queue: VecDeque<(usize, usize, i16)> = VecDeque::new();
     let mut counter: i64 = 0;
 
+    // add stations to the queue
     data.iter()
         .enumerate()
         .filter(|(_, queue_cell)| queue_cell.transit_type >= 0)
@@ -113,7 +144,8 @@ async fn main() -> Result<(), AppError> {
             // add initial stations to queue
             queue.push_back((origin_cell_index, origin_cell_index, 0))
         });
-    println!("added {} stations to queue", queue.len());
+    println!("[INFO MAIN] added {} stations to queue", queue.len());
+
     //main loop
     let start_time = Instant::now();
     while !queue.is_empty() {
@@ -125,7 +157,7 @@ async fn main() -> Result<(), AppError> {
             data[origin_index].freq.clone(),
         );
 
-        print!("calculating cell {} \r", current_h3);
+        print!("   ... calculating cell {} ({}) \r", current_h3, counter);
         counter += 1;
 
         // get neighbors
@@ -163,8 +195,54 @@ async fn main() -> Result<(), AppError> {
             });
     }
     println!();
-    println!("processed {} cells in {:?}", counter, start_time.elapsed());
+    println!("[INFO MAIN] processed {} cells in {:?}", counter, start_time.elapsed());
 
+    // aggregate scores
+    let start_time = Instant::now();
+    println!("[INFO AGG-1] aggregating visitor scores");
+    for cell in &mut data {
+        cell.aggregate_scores()
+    }
+    println!("[INFO AGG-1] visitor score aggregation finished in {:?}", start_time.elapsed());
+
+    // get all h3-4 groups
+    data.iter()
+        .filter(|cell| {cell.transit_type != -1 || cell.scores.len() > 0})
+        .into_group_map_by(|cell| {
+            cell.h3_4
+        })
+        .into_iter()
+        .for_each(|(h3_4group, cells)| {
+            // aggregate to h3-10
+            let vis_cells = cells
+            .into_iter()
+            .into_group_map_by(|cell| {cell.h3_10})
+            .iter()
+            .map(|(h3_10_group, h3_10_cells)| {
+                // aggregate the scores from each cell
+                let transit_type = h3_10_cells.iter().map(|cell| cell.transit_type).max().unwrap_or(-1);
+                let score = h3_10_cells.iter()
+                    .map(|cell| {vec![cell.scores.clone(), cell.freq.clone()]})
+                    .flatten()
+                    .reduce(|a, b| {
+                        a.iter().zip(b.iter()).map(|(xa, xb)| {
+                            xa + xb
+                        }).collect::<Vec<f32>>()
+                    }).unwrap_or(vec![0.0;24*7]).iter().map(|value| {
+                        value / h3_10_cells.len() as f32
+                    }).collect::<Vec<f32>>();
+                VisCell {
+                    h3: u64_to_hex(*h3_10_group),
+                    transit_type,
+                    freq: score,
+                }
+            }).collect::<Vec<VisCell>>();
+
+            // write result for h3-4 group to json
+            let path = format!("docs/h3/{}.json",u64_to_hex(h3_4group));
+            let file = File::create(path).expect("could not create file :(");
+            serde_json::to_writer(file, &vis_cells).expect("could not export json :(");
+        });
     Ok(())
 }
 
@@ -173,5 +251,5 @@ fn hex_to_u64(input: String) -> Option<u64> {
 }
 
 fn u64_to_hex(input: u64) -> String {
-    format!("{:X}", input)
+    format!("{:x}", input)
 }
