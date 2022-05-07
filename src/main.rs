@@ -182,10 +182,7 @@ async fn main() -> Result<(), AppError> {
                             .iter()
                             .map(|value| {
                                 // calculate score
-                                let new_value = value
-                                    / (1.0
-                                        + 5.0
-                                            * f32::exp(0.5 * (f32::from(distance) - 1.5 * value)));
+                                let new_value = value / (1.0 + 5.0 * f32::exp(0.5 * (f32::from(distance) - 1.5 * value)));
                                 if new_value > max_value {
                                     max_value = new_value
                                 }
@@ -256,7 +253,7 @@ async fn main() -> Result<(), AppError> {
                                 .iter()
                                 .map(|cell| if cell.transit_type >= 0 { 2 } else { 1 })
                                 .sum();
-                            let new_value = f32::powf(2.0, f32::exp(value / divisor as f32));
+                            let new_value = f32::sqrt(value / divisor as f32);
                             if new_value < 0.01 {
                                 -1.0
                             } else {
