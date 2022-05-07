@@ -93,7 +93,7 @@ function renderLayer() {
     const layers = dataChunks.map((chunk, chunkIndex) => new H3HexagonLayer({
         id: `chunk-${chunkIndex}`,
         data: chunk,
-        pickable: false,
+        pickable: true,
         wireframe: false,
         filled: true,
         extruded: true,
