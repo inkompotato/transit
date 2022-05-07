@@ -228,7 +228,7 @@ async fn main() -> Result<(), AppError> {
                             xa + xb
                         }).collect::<Vec<f32>>()
                     }).unwrap_or(vec![0.0;24*7]).iter().map(|value| {
-                        f32::log2(value / h3_10_cells.len() as f32)
+                        value / h3_10_cells.len() as f32
                     }).collect::<Vec<f32>>();
                 VisCell {
                     h3: u64_to_hex(*h3_10_group),
