@@ -1,15 +1,22 @@
 use h3ron::{FromH3Index, H3Cell, Index};
 use itertools::Itertools;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use serde_json::Deserializer;
 use std::{
     collections::{HashMap, VecDeque},
-    fs::File,
+    fs::{File, self},
+    io::{self, BufReader},
     num::ParseIntError,
 };
 use tokio::time::Instant;
-use tokio_postgres::{Error, NoTls, Row};
+use tokio_postgres::Error;
 
-const DB_CONN: &str = "postgresql://postgres:byS*<7AxwYC#U24s@srv-captain--postgres-db-db/postgres";
+// const DB_CONN: &str = "postgresql://postgres:byS*<7AxwYC#U24s@srv-captain--postgres-db-db/postgres";
+
+struct Config {
+    reasonable_distances: Vec<f32>,
+    rual_scale_factor: f32,
+}
 
 #[derive(Debug)]
 struct AppError {
@@ -48,26 +55,55 @@ struct VisCell {
     freq: Vec<f32>,
 }
 
+// ,h3,h3_group,h3_group_agg,freq,urban,type
+type Record = (i64, String, String, String, Vec<f32>, i32, i32);
+
+#[derive(Debug, Serialize, Deserialize)]
+struct JsonCell {
+    h3: String,
+    h3_group: String,
+    h3_group_agg: String,
+    freq: Vec<f32>,
+    urban: i32,
+    #[serde(rename(deserialize = "type"))]
+    transit_type: i32,
+}
+
 #[derive(Debug)]
 struct Cell {
     h3: u64,
     h3_4: u64,
     h3_10: u64,
     freq: Vec<f32>,
+    urban: bool,
     transit_type: i32,
     scores: Vec<f32>,
     visitors: Vec<u64>,
 }
 
 impl Cell {
-    pub fn from_row(row: &Row) -> Option<Self> {
+    pub fn from_record(record: Record) -> Option<Self> {
         Some(Cell {
-            h3: hex_to_u64(row.get(0))?,
-            h3_4: hex_to_u64(row.get(1))?,
-            h3_10: hex_to_u64(row.get(2))?,
-            freq: row.get(3),
-            transit_type: row.get(4),
-            scores: row.get(5),
+            h3: hex_to_u64(record.1)?,
+            h3_4: hex_to_u64(record.2)?,
+            h3_10: hex_to_u64(record.3)?,
+            freq: record.4,
+            urban: if record.5 == 1 { true } else { false },
+            transit_type: record.6,
+            scores: vec![0.0; 24 * 7],
+            visitors: Vec::new(),
+        })
+    }
+
+    pub fn from_json_cell(cell: &JsonCell) -> Option<Self> {
+        Some(Cell {
+            h3: hex_to_u64(cell.h3.clone())?,
+            h3_4: hex_to_u64(cell.h3_group.clone())?,
+            h3_10: hex_to_u64(cell.h3_group_agg.clone())?,
+            freq: cell.freq.clone(),
+            urban: if cell.urban == 1 { true } else { false },
+            transit_type: cell.transit_type,
+            scores: vec![0.0; 24 * 7],
             visitors: Vec::new(),
         })
     }
@@ -85,42 +121,40 @@ impl Cell {
             .map(|x| x.to_vec())
             // sort by highest value (in this case, just by the score for monday morning to speed things up)
             .sorted_by_key(|list| *list.get(31).unwrap_or(&0.0) as i32)
-            .reduce(|a, b| {
+            .fold(self.freq.clone(), |a, b| {
                 // reduce function, initial score + half of the next score, repeat for all
                 a.iter()
                     .zip(b.iter())
-                    .map(|(xa, xb)| xa + (0.2 * xb))
+                    .map(|(xa, xb)| xa + (0.5 * xb))
                     .collect()
             })
-            .unwrap_or_default();
     }
+}
+
+fn read_csv() -> Result<Vec<Cell>, AppError> {
+    println!("reading file");
+    let file = fs::read_to_string("./resources/dataframe.json").expect("msg");
+    println!("parsing file");
+    let data = Deserializer::from_str(&file).into_iter::<JsonCell>().filter_map(|item| {
+        Cell::from_json_cell(&item)
+    });
+    // let data: Vec<JsonCell> = serde_json::from_str(&file).expect("error");
+    // let data = data.iter().filter_map(|json_cell| Cell::from_json_cell(json_cell)).collect::<Vec<Cell>>();
+
+    Ok(data)
 }
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
-    let (client, connection) = tokio_postgres::connect(DB_CONN, NoTls).await?;
+    let config = Config {
+        // bus, tram, metro, train
+        reasonable_distances: vec![8.0, 8.0, 12.0, 15.0],
+        rual_scale_factor: 1.5,
+    };
+
     let start_time = Instant::now();
-
-    tokio::spawn(async move {
-        if let Err(e) = connection.await {
-            eprintln!("connection error: {}", e);
-        }
-    });
-
-    println!("[INFO DB] connected to DB at {}", DB_CONN);
-
-    // load all data from the DB into memory
-    let mut data: Vec<Cell> = client
-        .query(
-            "
-            select * from transit 
-        ",
-            &[],
-        )
-        .await?
-        .iter()
-        .filter_map(|row| Cell::from_row(row))
-        .collect();
+    println!("started transit score calculation");
+    let mut data: Vec<Cell> = read_csv()?;
 
     // this is created to enable (near) constant time lookups in the data array
     let index: HashMap<u64, usize> = data
@@ -130,7 +164,7 @@ async fn main() -> Result<(), AppError> {
         .collect::<HashMap<u64, usize>>();
 
     println!(
-        "[INFO DB] got {} cells from DB in {:?}",
+        "[INFO DATA] got {} cells from file in {:?}",
         data.len(),
         start_time.elapsed()
     );
@@ -155,10 +189,11 @@ async fn main() -> Result<(), AppError> {
     while !queue.is_empty() {
         let (current_index, origin_index, distance) = queue.pop_front().unwrap();
 
-        let (current_h3, origin_h3, origin_freq) = (
+        let (current_h3, origin_h3, origin_freq, origin_type) = (
             data[current_index].h3,
             data[origin_index].h3,
             data[origin_index].freq.clone(),
+            data[origin_index].transit_type,
         );
 
         print!("   ... calculating cell {} ({}) \r", current_h3, counter);
@@ -172,6 +207,7 @@ async fn main() -> Result<(), AppError> {
             .for_each(|neighbor_h3_cell| {
                 if let Some(neighbor_cell_index) = index.get(&neighbor_h3_cell.h3index()) {
                     let neighbor_cell = &mut data[*neighbor_cell_index];
+                    let factor = if neighbor_cell.urban { 1.0 } else { config.rual_scale_factor };
 
                     if !neighbor_cell.visitors.contains(&origin_h3) {
                         // cell is part of our network
@@ -182,7 +218,13 @@ async fn main() -> Result<(), AppError> {
                             .iter()
                             .map(|value| {
                                 // calculate score
-                                let new_value = value / (1.0 + 5.0 * f32::exp(0.5 * (f32::from(distance) - 1.5 * value)));
+                                // let new_value = value / (1.0 + 5.0 * f32::exp(0.5 * (f32::from(distance) - 1.5 * value)));
+                                let new_value = value
+                                    / (1.0
+                                        + f32::exp(
+                                            (1.0 / factor) * f32::from(distance)
+                                                - config.reasonable_distances[origin_type as usize],
+                                        ));
                                 if new_value > max_value {
                                     max_value = new_value
                                 }
@@ -254,7 +296,7 @@ async fn main() -> Result<(), AppError> {
                                 .map(|cell| if cell.transit_type >= 0 { 2 } else { 1 })
                                 .sum();
                             let new_value = f32::powf(value / divisor as f32, 1.0 / 1.4);
-                            if new_value < 0.01 {
+                            if new_value < 0.1 {
                                 -1.0
                             } else {
                                 new_value
@@ -270,9 +312,10 @@ async fn main() -> Result<(), AppError> {
                 .collect::<Vec<VisCell>>();
 
             // write result for h3-4 group to json
+            print!(" .. exporting {} \r", &h3_4group);
             let path = format!("docs/h3/{}.json", u64_to_hex(h3_4group));
-            let file = File::create(path).expect("could not create file :(");
-            serde_json::to_writer(file, &vis_cells).expect("could not export json :(");
+            let file = File::create(path).expect("could not create file");
+            serde_json::to_writer(file, &vis_cells).expect("could not export json");
         });
     Ok(())
 }
