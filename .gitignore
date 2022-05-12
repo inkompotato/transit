@@ -10,3 +10,4 @@ keplergl_map.html
 .vscode
 *.pbf
 /notebooks/data
+dataframe.json

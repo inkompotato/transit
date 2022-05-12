@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Deserializer;
 use std::{
     collections::{HashMap, VecDeque},
-    fs::{File, self},
+    fs::{self, File},
     io::{self, BufReader},
     num::ParseIntError,
 };
@@ -120,7 +120,7 @@ impl Cell {
             .chunks(24 * 7 as usize)
             .map(|x| x.to_vec())
             // sort by highest value (in this case, just by the score for monday morning to speed things up)
-            .sorted_by_key(|list| *list.get(31).unwrap_or(&0.0) as i32)
+            .sorted_by_key(|list| -*list.get(31).unwrap_or(&0.0) as i32)
             .fold(self.freq.clone(), |a, b| {
                 // reduce function, initial score + half of the next score, repeat for all
                 a.iter()
@@ -135,11 +135,12 @@ fn read_csv() -> Result<Vec<Cell>, AppError> {
     println!("reading file");
     let file = fs::read_to_string("./resources/dataframe.json").expect("msg");
     println!("parsing file");
-    let data = Deserializer::from_str(&file).into_iter::<JsonCell>().filter_map(|item| {
-        Cell::from_json_cell(&item)
-    });
-    // let data: Vec<JsonCell> = serde_json::from_str(&file).expect("error");
-    // let data = data.iter().filter_map(|json_cell| Cell::from_json_cell(json_cell)).collect::<Vec<Cell>>();
+    // let data = Deserializer::from_str(&file)
+    //     .into_iter::<JsonCell>()
+    //     .filter_map(|res| Cell::from_json_cell(&item.unwrap()))
+    //     .collect::<Vec<Cell>>();
+    let data: Vec<JsonCell> = serde_json::from_str(&file).expect("error");
+    let data = data.iter().filter_map(|json_cell| Cell::from_json_cell(json_cell)).collect::<Vec<Cell>>();
 
     Ok(data)
 }
@@ -207,7 +208,11 @@ async fn main() -> Result<(), AppError> {
             .for_each(|neighbor_h3_cell| {
                 if let Some(neighbor_cell_index) = index.get(&neighbor_h3_cell.h3index()) {
                     let neighbor_cell = &mut data[*neighbor_cell_index];
-                    let factor = if neighbor_cell.urban { 1.0 } else { config.rual_scale_factor };
+                    let factor = if neighbor_cell.urban {
+                        1.0
+                    } else {
+                        config.rual_scale_factor
+                    };
 
                     if !neighbor_cell.visitors.contains(&origin_h3) {
                         // cell is part of our network
@@ -259,7 +264,7 @@ async fn main() -> Result<(), AppError> {
         "[INFO AGG-1] visitor score aggregation finished in {:?}",
         start_time.elapsed()
     );
-
+    println!();
     // get all h3-4 groups
     data.iter()
         .filter(|cell| cell.transit_type != -1 || cell.scores.len() > 0)
@@ -267,6 +272,7 @@ async fn main() -> Result<(), AppError> {
         .into_iter()
         .for_each(|(h3_4group, cells)| {
             // aggregate to h3-10
+            print!(" .. aggregating {} \r", &h3_4group);
             let vis_cells = cells
                 .into_iter()
                 .into_group_map_by(|cell| cell.h3_10)
