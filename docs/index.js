@@ -16,6 +16,7 @@ class MyMapController extends MapController {
 const deckgl = new DeckGL({
     mapStyle: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
     // controller: { type: MyMapController },
+    controller: true,
     initialViewState: {
         longitude: 12.6,
         latitude: 55.6,
