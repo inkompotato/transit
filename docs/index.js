@@ -53,8 +53,9 @@ function setToCurrentTime() {
 }
 
 function getColor(value) {
-    let color = chroma(colors[value % 10]).rgb().push(160)
-    return
+    let color = chroma(colors[value % 10]).rgb()
+    color.push(160)
+    return color
 }
 
 const dataChunks = []
