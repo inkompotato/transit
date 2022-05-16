@@ -53,7 +53,7 @@ function setToCurrentTime() {
 }
 
 function getColor(value) {
-    return colors[value % 10]
+    return chroma(colors[value % 10]).rgba()
 }
 
 const dataChunks = []
