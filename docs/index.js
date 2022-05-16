@@ -53,7 +53,9 @@ function setToCurrentTime() {
 }
 
 function getColor(value) {
-    return chroma(colors[value % 10]).rgb()
+    let color = chroma(colors[value % 10]).rgb()
+    console.log(color)
+    return color
 }
 
 const dataChunks = []
@@ -82,11 +84,7 @@ function renderLayer() {
         extruded: true,
         elevationScale: 20,
         getHexagon: d => d.h3,
-        getFillColor: d => colorContinuous({
-            attr: d[options['time']],
-            domain: [0, 1e5],
-            colors: 'BluYl'
-          }),
+        getFillColor: d => getColor(d.type),
         getElevation: d => d.freq[options['time']],
         updateTriggers: {
             getElevation: [options['time']]
