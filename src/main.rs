@@ -135,12 +135,11 @@ fn read_csv() -> Result<Vec<Cell>, AppError> {
     println!("reading file");
     let file = fs::read_to_string("./resources/dataframe.json").expect("msg");
     println!("parsing file");
-    // let data = Deserializer::from_str(&file)
-    //     .into_iter::<JsonCell>()
-    //     .filter_map(|res| Cell::from_json_cell(&item.unwrap()))
-    //     .collect::<Vec<Cell>>();
     let data: Vec<JsonCell> = serde_json::from_str(&file).expect("error");
-    let data = data.iter().filter_map(|json_cell| Cell::from_json_cell(json_cell)).collect::<Vec<Cell>>();
+    let data = data
+        .iter()
+        .filter_map(|json_cell| Cell::from_json_cell(json_cell))
+        .collect::<Vec<Cell>>();
 
     Ok(data)
 }
@@ -237,7 +236,7 @@ async fn main() -> Result<(), AppError> {
                             })
                             .collect::<Vec<f32>>();
 
-                        if max_value >= 0.5 {
+                        if max_value >= 0.2 {
                             // write back score
                             neighbor_cell.append_scores(new_score, origin_h3);
                             // append to queue
@@ -264,7 +263,8 @@ async fn main() -> Result<(), AppError> {
         "[INFO AGG-1] visitor score aggregation finished in {:?}",
         start_time.elapsed()
     );
-    println!();
+    let start_time = Instant::now();
+    println!("[INFO EXPORT] starting data export");
     // get all h3-4 groups
     data.iter()
         .filter(|cell| cell.transit_type != -1 || cell.scores.len() > 0)
@@ -318,11 +318,15 @@ async fn main() -> Result<(), AppError> {
                 .collect::<Vec<VisCell>>();
 
             // write result for h3-4 group to json
-            print!(" .. exporting {} \r", &h3_4group);
             let path = format!("docs/h3/{}.json", u64_to_hex(h3_4group));
             let file = File::create(path).expect("could not create file");
             serde_json::to_writer(file, &vis_cells).expect("could not export json");
         });
+
+    println!(
+        "[INFO EXPORT] export finished in {:?}",
+        start_time.elapsed()
+    );
     Ok(())
 }
 
