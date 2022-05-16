@@ -11,7 +11,7 @@ class MyMapController extends MapController {
             document.getElementById('coordinate-info').innerHTML = `${lat.toFixed(2)}, ${lon.toFixed(2)}`
 
             let center_h3 = h3.geoToH3(lat, lon, 4)
-            let ring_sizes = [6, 4, 2, 1, 1, 0, 0, 0]
+            let ring_sizes = [6, 4, 2, 1, 1, 1, 0, 0]
             let visible_h3s = h3.kRing(center_h3, ring_sizes[zoom - 7])
 
             for (let i = 0; i < vismap.length; i++) { 
