@@ -1,4 +1,4 @@
-const {DeckGL, H3HexagonLayer, MapController, PathLayer} = deck;
+const { DeckGL, H3HexagonLayer, MapController, PathLayer } = deck;
 
 class MyMapController extends MapController {
     handleEvent(event) {
@@ -15,7 +15,7 @@ class MyMapController extends MapController {
 
 const deckgl = new DeckGL({
     mapStyle: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-    controller: {type: MyMapController},
+    // controller: { type: MyMapController },
     initialViewState: {
         longitude: 12.6,
         latitude: 55.6,
@@ -40,10 +40,10 @@ function setToCurrentTime() {
     let now = new Date();
     let day = now.getDay()
     let hour = now.getHours()
-    let value = (day*24) + hour
+    let value = (day * 24) + hour
 
     options["time"] = value;
-    document.getElementById( 'time-value').innerHTML = value;
+    document.getElementById('time-value').innerHTML = value;
     document.getElementById('time').value = value
     document.getElementById('time-label').innerHTML = `${days[day]}, ${hour}:00 - ${hour + 1}:00`;
     renderLayer()
@@ -55,7 +55,7 @@ function getColor(value) {
             return [89, 191, 217, 120]
         case 1:
             return [217, 131, 111, 140]
-        case 2: 
+        case 2:
             return [78, 217, 168, 160]
         case 3:
             return [217, 174, 67, 180]
@@ -98,7 +98,7 @@ function renderLayer() {
         getTooltip: d => `score = ${d.freq[options['time']]}`
     }))
 
-    deckgl.setProps({layers})
+    deckgl.setProps({ layers })
 }
 
 renderLayer();
