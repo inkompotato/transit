@@ -29,6 +29,8 @@ const deckgl = new DeckGL({
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
+const colors = chroma.scale(['#59bfd9','#d9ae43']).mode('lch').colors(10)
+
 const OPTIONS = ['time'];
 const options = {};
 
@@ -51,18 +53,7 @@ function setToCurrentTime() {
 }
 
 function getColor(value) {
-    switch (value) {
-        case 0:
-            return [89, 191, 217, 120]
-        case 1:
-            return [217, 131, 111, 140]
-        case 2:
-            return [78, 217, 168, 160]
-        case 3:
-            return [217, 174, 67, 180]
-        default:
-            return [100, 132, 217, 100]
-    }
+    return colors[value % 10]
 }
 
 const dataChunks = []
