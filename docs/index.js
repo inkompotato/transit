@@ -1,13 +1,31 @@
-const {DeckGL, H3HexagonLayer, MapController, PathLayer} = deck;
+const { DeckGL, H3HexagonLayer, MapController, PathLayer } = deck;
 
 class MyMapController extends MapController {
     handleEvent(event) {
-        if (event.type === "pan" || event.type === "pinch") {
+        if (event.type === "panmove" || event.type === "wheel" || event.type === "pinchmove") {
             let v = deckgl.viewManager._viewports[0]
             let lat = v.latitude
             let lon = v.longitude
+            let zoom = Math.floor(v.zoom)
 
             document.getElementById('coordinate-info').innerHTML = `${lat.toFixed(2)}, ${lon.toFixed(2)}`
+
+            let center_h3 = h3.geoToH3(lat, lon, 4)
+            let ring_sizes = [6, 4, 2, 1, 1, 1, 1, 1]
+            let visible_h3s = h3.kRing(center_h3, ring_sizes[zoom - 7])
+
+            for (let i = 0; i < vismap.length; i++) { 
+                vismap[i] = false
+            }
+            var changed = false
+            visible_h3s.forEach(visible_h3 => {
+                if (chunk_map[visible_h3] != undefined) {
+                    vismap[chunk_map[visible_h3]] = true
+                    changed = true
+                }
+            })
+
+            renderLayer()
         }
         super.handleEvent(event)
     }
@@ -15,7 +33,8 @@ class MyMapController extends MapController {
 
 const deckgl = new DeckGL({
     mapStyle: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-    controller: {type: MyMapController},
+    controller: { type: MyMapController },
+    // controller: true,
     initialViewState: {
         longitude: 12.6,
         latitude: 55.6,
@@ -28,14 +47,7 @@ const deckgl = new DeckGL({
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
-/*const route_data = d3.csv("routes.csv").then(data => {
-  return data.map(d => {
-    return {
-      path: JSON.parse(d.geo),
-      category: d.category
-    }
-  })
-})*/
+const colors = chroma.scale(['#59bfd9','#d9ae43']).mode('lch').colors(20).map(c => chroma(c).rgb().concat(160))
 
 const OPTIONS = ['time'];
 const options = {};
@@ -44,39 +56,28 @@ OPTIONS.forEach(key => {
     document.getElementById(key).oninput = renderLayer;
 });
 
-document.getElementById("now-button").onclick = setToCurrentTime;
+document.getElementById("now-button").addEventListener('click', e => setToCurrentTime())
+
 function setToCurrentTime() {
     let now = new Date();
     let day = now.getDay()
     let hour = now.getHours()
-    let value = (day*24) + hour
+    let value = (day * 24) + hour
 
     options["time"] = value;
-    document.getElementById( 'time-value').innerHTML = value;
+    document.getElementById('time-value').innerHTML = value;
     document.getElementById('time').value = value
     document.getElementById('time-label').innerHTML = `${days[day]}, ${hour}:00 - ${hour + 1}:00`;
     renderLayer()
 }
 
-function getColor(value) {
-    switch (value) {
-        case 0:
-            return [89, 191, 217, 120]
-        case 1:
-            return [217, 131, 111, 140]
-        case 2: 
-            return [78, 217, 168, 160]
-        case 3:
-            return [217, 174, 67, 180]
-        default:
-            return [100, 132, 217, 100]
-    }
-}
-
 const dataChunks = []
+var chunk_map = {}
+var vismap = []
 
 function onNewDataArrive(chunk) {
     dataChunks.push(chunk)
+    console.log('new chunk arrived', dataChunks.length)
     renderLayer()
 }
 
@@ -92,71 +93,23 @@ function renderLayer() {
 
     const layers = dataChunks.map((chunk, chunkIndex) => new H3HexagonLayer({
         id: `chunk-${chunkIndex}`,
+        visible: vismap[chunkIndex],
         data: chunk,
         pickable: false,
         wireframe: false,
         filled: true,
         extruded: true,
-        elevationScale: 20,
+        elevationScale: 40,
         getHexagon: d => d.h3,
-        getFillColor: d => getColor(d.type),
+        getFillColor: d => colors[d.color_index[options['time']]],
         getElevation: d => d.freq[options['time']],
         updateTriggers: {
-            getElevation: [options['time']]
+            getElevation: vismap[chunkIndex] && [options['time']],
+            getFillColor: vismap[chunkIndex] && [options['time']],
         }
     }))
 
-    deckgl.setProps({layers})
-
-    /*  const h3layer = new H3HexagonLayer({
-        id: 'h3-hexagon-layer',
-        data: getH3Data(),
-        pickable: false,
-        wireframe: false,
-        filled: true,
-        extruded: true,
-        elevationScale: 20,
-        getHexagon: d => d.h3,
-        getFillColor: d => [255, 128, 0, 180],
-        getElevation: d => d.freq[options['time']],
-        updateTriggers: {
-          getElevation: [options['time']]
-        }
-      });*/
-
-    /*  const route_layer = new PathLayer({
-        id: 'route_layer',
-        data: route_data,
-        pickable: true,
-        wireframe: false,
-        widthMinPixels: 2,
-        getPath: d => d.path,
-        getColor: d => {
-          switch (d.category) {
-            case "0": return [17, 173, 125, 40]
-            case "1": return [17, 54, 173, 40]
-            case "2": return [250, 125, 0, 80]
-            case "3": return [12, 250, 125, 0]
-            default: return [12, 69, 250, 40]
-          }
-
-        },
-        getWidth: d => 5
-      })*/
-
-    /*  const testLayer = new H3HexagonLayer({
-        id: 'h3-test-layer',
-        data: h3_groups,
-        wireframe: false,
-        filled: false,
-        extruded: false,
-        elevationScale: 0,
-        getLineColor: d => [255, 255, 255],
-        getLineWidth: d => 25,
-        getHexagon: d => d.h3,
-        getElevation: d => 12
-      })*/
-
+    deckgl.setProps({ layers })
 }
 
 renderLayer();
@@ -168,17 +121,27 @@ d3.json("h3.json").then(data => {
             h3: elem
         }
     })
+    // return [{
+    //     h3: '841f059ffffffff'
+    // }]
 }).then(groups => {
     groups.forEach(group => {
         d3.json(`h3/${group.h3}.json`).then(data => {
             return data.map(d => {
                 return {
                     h3: d.h3,
-                    freq: new Float32Array(d.freq),
+                    freq: Float32Array.from(d.freq),
+                    color_index: Int8Array.from(d.freq.map(f => {
+                        if (f > 0) {
+                            return Math.min(Math.floor(f), 19.0)
+                        } else { return 0 }
+                    })),
                     type: d.type
                 }
             })
         }).then(data => {
+            chunk_map[group.h3] = dataChunks.length
+            vismap[dataChunks.length] = false
             onNewDataArrive(data)
         })
     })
