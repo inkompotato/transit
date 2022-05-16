@@ -29,7 +29,7 @@ const deckgl = new DeckGL({
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
-const colors = chroma.scale(['#59bfd9','#d9ae43']).mode('lch').colors(10)
+// const colors = chroma.scale(['#59bfd9','#d9ae43']).mode('lch').colors(10)
 
 const OPTIONS = ['time'];
 const options = {};
@@ -53,7 +53,7 @@ function setToCurrentTime() {
 }
 
 function getColor(value) {
-    return chroma(colors[value % 10]).rgba()
+    return chroma(colors[value % 10]).rgb()
 }
 
 const dataChunks = []
@@ -82,7 +82,11 @@ function renderLayer() {
         extruded: true,
         elevationScale: 20,
         getHexagon: d => d.h3,
-        getFillColor: d => getColor(d.type),
+        getFillColor: d => colorContinuous({
+            attr: d[options['time']],
+            domain: [0, 1e5],
+            colors: 'BluYl'
+          }),
         getElevation: d => d.freq[options['time']],
         updateTriggers: {
             getElevation: [options['time']]
