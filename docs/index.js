@@ -29,7 +29,7 @@ const deckgl = new DeckGL({
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
-// const colors = chroma.scale(['#59bfd9','#d9ae43']).mode('lch').colors(10)
+const colors = chroma.scale(['#59bfd9','#d9ae43']).mode('lch').colors(10)
 
 const OPTIONS = ['time'];
 const options = {};
@@ -55,7 +55,7 @@ function setToCurrentTime() {
 function getColor(value) {
     let color = chroma(colors[value % 10]).rgb()
     console.log(color)
-    return color
+    return color.append(255)
 }
 
 const dataChunks = []
