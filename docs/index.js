@@ -8,10 +8,11 @@ class MyMapController extends MapController {
             let lon = v.longitude
             let zoom = Math.floor(v.zoom)
 
-            document.getElementById('coordinate-info').innerHTML = `${lat.toFixed(2)}, ${lon.toFixed(2)}`
-
             let center_h3 = h3.geoToH3(lat, lon, 4)
             let ring_sizes = [6, 4, 2, 1, 1, 0, 0, 0]
+
+            document.getElementById('coordinate-info').innerHTML = `coordinates: ${lat.toFixed(2)}, ${lon.toFixed(2)} <br>h3 region: ${center_h3} <br>zoom: ${zoom} <br> rendering k-ring of size ${ring_sizes[zoom-7]}`
+
             let visible_h3s = h3.kRing(center_h3, ring_sizes[zoom - 7])
 
             for (let i = 0; i < vismap.length; i++) { 
@@ -48,6 +49,17 @@ const deckgl = new DeckGL({
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
 const colors = chroma.scale(['#59bfd9','#d9ae43']).mode('lch').colors(20).map(c => chroma(c).rgb().concat(160))
+
+const legend = document.getElementById('legend')
+legend.innerHTML += "<div style='margin-right: 5px'>1.0</div>"
+colors.forEach(color => {
+    let elem = document.createElement('span')
+    elem.setAttribute('style', `background-color: rgba(${color}); margin-right: 2px; width: 1em`)
+    elem.setAttribute('class', 'uk-tile uk-padding-remove')
+    legend.appendChild(elem)
+})
+legend.innerHTML += "<div style='margin-left: 5px'>20.0+</div>"
+
 
 const OPTIONS = ['time'];
 const options = {};
@@ -116,14 +128,14 @@ renderLayer();
 
 // load h3 groups and incrementally load the data for each of them
 d3.json("h3.json").then(data => {
-    return data.flat().map(elem => {
-        return {
-            h3: elem
-        }
-    })
-    // return [{
-    //     h3: '841f059ffffffff'
-    // }]
+    // return data.flat().map(elem => {
+    //     return {
+    //         h3: elem
+    //     }
+    // })
+    return [{
+        h3: '841f059ffffffff'
+    }]
 }).then(groups => {
     groups.forEach(group => {
         d3.json(`h3/${group.h3}.json`).then(data => {
