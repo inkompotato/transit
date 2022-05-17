@@ -3,33 +3,37 @@ const { DeckGL, H3HexagonLayer, MapController, PathLayer } = deck;
 class MyMapController extends MapController {
     handleEvent(event) {
         if (event.type === "panmove" || event.type === "wheel" || event.type === "pinchmove") {
-            let v = deckgl.viewManager._viewports[0]
-            let lat = v.latitude
-            let lon = v.longitude
-            let zoom = Math.floor(v.zoom)
-
-            let center_h3 = h3.geoToH3(lat, lon, 4)
-            let ring_sizes = [6, 4, 2, 1, 1, 1, 1, 1]
-
-            document.getElementById('coordinate-info').innerHTML = `coordinates: ${lat.toFixed(2)}, ${lon.toFixed(2)} <br>h3 region: ${center_h3} <br>zoom: ${zoom} <br> rendering k-ring of size ${ring_sizes[zoom-7]}`
-
-            let visible_h3s = h3.kRing(center_h3, ring_sizes[zoom - 7])
-
-            for (let i = 0; i < vismap.length; i++) { 
-                vismap[i] = false
-            }
-            var changed = false
-            visible_h3s.forEach(visible_h3 => {
-                if (chunk_map[visible_h3] != undefined) {
-                    vismap[chunk_map[visible_h3]] = true
-                    changed = true
-                }
-            })
-
-            renderLayer()
+            handleViewUpdate()
         }
         super.handleEvent(event)
     }
+}
+
+function handleViewUpdate() {
+    let v = deckgl.viewManager._viewports[0]
+    let lat = v.latitude
+    let lon = v.longitude
+    let zoom = Math.floor(v.zoom)
+
+    let center_h3 = h3.geoToH3(lat, lon, 4)
+    let ring_sizes = [6, 4, 2, 1, 1, 1, 1, 1]
+
+    document.getElementById('coordinate-info').innerHTML = `Coordinates: ${lat.toFixed(2)}, ${lon.toFixed(2)} <br>H3 Region: ${center_h3} <br>Zoom: ${zoom} <br>Rendering k-ring of size ${ring_sizes[zoom - 7]}`
+
+    let visible_h3s = h3.kRing(center_h3, ring_sizes[zoom - 7])
+
+    for (let i = 0; i < vismap.length; i++) {
+        vismap[i] = false
+    }
+    var changed = false
+    visible_h3s.forEach(visible_h3 => {
+        if (chunk_map[visible_h3] != undefined) {
+            vismap[chunk_map[visible_h3]] = true
+            changed = true
+        }
+    })
+
+    renderLayer()
 }
 
 const deckgl = new DeckGL({
@@ -48,7 +52,7 @@ const deckgl = new DeckGL({
 
 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
-const colors = chroma.scale(['#59bfd9','#d9ae43']).mode('lch').colors(20).map(c => chroma(c).rgb().concat(160))
+const colors = chroma.scale(['#400040', '#80ffff']).mode('lch').colors(20).map(c => chroma(c).rgb().concat(160))
 
 const legend = document.getElementById('legend')
 legend.innerHTML += "<div style='margin-right: 5px'>1.0</div>"
@@ -90,7 +94,8 @@ var vismap = []
 function onNewDataArrive(chunk) {
     dataChunks.push(chunk)
     console.log('new chunk arrived', dataChunks.length)
-    renderLayer()
+    handleViewUpdate()
+    // renderLayer()
 }
 
 function renderLayer() {
@@ -128,14 +133,14 @@ renderLayer();
 
 // load h3 groups and incrementally load the data for each of them
 d3.json("h3.json").then(data => {
-    // return data.flat().map(elem => {
-    //     return {
-    //         h3: elem
-    //     }
-    // })
-    return [{
-        h3: '841f059ffffffff'
-    }]
+    return data.flat().map(elem => {
+        return {
+            h3: elem
+        }
+    })
+    // return [{
+    //     h3: '841f059ffffffff'
+    // }]
 }).then(groups => {
     groups.forEach(group => {
         d3.json(`h3/${group.h3}.json`).then(data => {
