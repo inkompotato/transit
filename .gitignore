@@ -9,5 +9,5 @@ keplergl_map.html
 .idea
 .vscode
 *.pbf
-/notebooks/data
+/notebooks/data/Elements
 dataframe.json
