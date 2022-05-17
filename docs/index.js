@@ -9,7 +9,7 @@ class MyMapController extends MapController {
             let zoom = Math.floor(v.zoom)
 
             let center_h3 = h3.geoToH3(lat, lon, 4)
-            let ring_sizes = [6, 4, 2, 1, 1, 0, 0, 0]
+            let ring_sizes = [6, 4, 2, 1, 1, 1, 1, 1]
 
             document.getElementById('coordinate-info').innerHTML = `coordinates: ${lat.toFixed(2)}, ${lon.toFixed(2)} <br>h3 region: ${center_h3} <br>zoom: ${zoom} <br> rendering k-ring of size ${ring_sizes[zoom-7]}`
 
